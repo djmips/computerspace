@@ -19,3 +19,4 @@ de1/PLLJ_PLLSPE_INFO.txt
 sim/build/
 sim/out/
 sim/*.vvp
+__pycache__/
