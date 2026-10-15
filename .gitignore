@@ -1,0 +1,21 @@
+# Quartus
+de1/db/
+de1/incremental_db/
+de1/output_files/
+de1/*.qws
+de1/*.rpt
+de1/*.summary
+de1/*.smsg
+de1/*.done
+de1/*.jdi
+de1/*.pin
+de1/*.sof
+de1/*.pof
+de1/greybox_tmp/
+de1/c5_pin_model_dump.txt
+de1/PLLJ_PLLSPE_INFO.txt
+
+# Simulation
+sim/build/
+sim/out/
+sim/*.vvp
