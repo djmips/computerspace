@@ -238,6 +238,7 @@ signal SB_7_old 						: std_logic :='1';
 signal SB_C_old 						: std_logic :='1';
 
 -- game clock
+signal e2_13_q, e2_4_q, e2_10_q				: std_logic := '0';
 signal b2_12 										: std_logic;
 
 signal e3_10, c5_3  								: std_logic;
@@ -661,6 +662,21 @@ e2_13 <= a6_3 	nor a6_11; 	-- detects rocket hit by saucer missile
 e2_4 	<= a6_8 	nor a6_6; 	-- detects saucer hit by rocket missile
 e2_10 <= a6_11 nor a6_8; 	-- detects rocket colliding with saucer
 
+-- DE1: the three detections are registered on the falling edge of the game
+-- clock (the position counters change on the rising edge) before they clock
+-- the hit and collision flags below. They are decodes of the object windows,
+-- which can glitch for an instant as the counters change; sampled at 50 MHz
+-- such a glitch now and then registered as a collision or hit that never
+-- happened. A real overlap lasts at least a whole pixel and is still caught.
+process (game_clk)
+begin
+	if falling_edge(game_clk) then
+		e2_13_q <= e2_13;
+		e2_4_q  <= e2_4;
+		e2_10_q <= e2_10;
+	end if;
+end process;
+
 -----------------------------------------------------------------------------
 -- COLLISION DETECTION & EXPLOSION: Saucer Visible or Not?						--
 -----------------------------------------------------------------------------
@@ -695,7 +711,7 @@ c5_8 	<= b5_8 nand c5_11;	-- signals that saucer should not be visible
 -- Flag is set when rocket and saucer collide, and reset back to normal		--
 -- after a while by a timer signal (a4_8)												--
 -----------------------------------------------------------------------------
-b5_11 <= e2_10; 	-- instant collision detection feeds clk
+b5_11 <= e2_10_q; 	-- instant collision detection feeds clk
 b5_13 <= a4_8; 	-- timer signal a4_8 feeds clrn
 
 -- Check if Rocket has collided with Saucer
@@ -732,7 +748,7 @@ end process;
 -- Flag is set when saucer is hit by rocket missile and reset back to		--
 -- normal after a while by a timer signal (a4_8)									--
 -----------------------------------------------------------------------------
-b5_3 <= e2_4; -- instant missile hit detection feeds clk
+b5_3 <= e2_4_q; -- instant missile hit detection feeds clk
 b5_1 <= a4_8; -- timer signal a4_8 feeds clrn
 
 -- check if Saucer is hit by Rocket missile
@@ -768,7 +784,7 @@ end process;
 -- Flag is set when rocket is hit by saucer missile and reset back to		--
 -- normal after a while by a timer signal (a4_8)									--
 -----------------------------------------------------------------------------
-a5_3 <= e2_13; -- instant missile hit detection feeds clk
+a5_3 <= e2_13_q; -- instant missile hit detection feeds clk
 a5_1 <= a4_8;  -- timer signal a4_8 feeds clrn
 
 -- Check if Rocket has been hit by Saucer missile

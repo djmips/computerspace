@@ -219,8 +219,10 @@ signal f4_8												: std_logic := '1';
 signal d6_1, f6_10, f6_13,f6_4,
 		 e6_6 											: std_logic := '1';
 
-signal a_rocket_q 									: unsigned (15 downto 0)
-															:= "0000000000000000";
+-- DE1: powers up 127 lines earlier than 0, putting the rocket mid-screen.
+-- From 0 it started inside the vertical blanking, off screen until moved.
+-- (The original's counters power up at random.)
+signal a_rocket_q 									: unsigned (15 downto 0) := x"7F00";
 
 -- signals for horizontal and vertical
 -- velocity for the rocket

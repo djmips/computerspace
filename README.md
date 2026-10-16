@@ -8,7 +8,7 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
 - **Core (`rtl/`)**: Computer Space FPGA emulator by **Mattias G** (2015), copied "wire by wire" from the
   schematics; fixes and sound simulation by **DarFPGA** (2017). Taken from
   [MiSTer-devel/Arcade-ComputerSpace_MiSTer](https://github.com/MiSTer-devel/Arcade-ComputerSpace_MiSTer)
-  at commit `8487fb22f11a40c456a507768180845ee2933439`, with three fixes marked `DE1:`:
+  at commit `8487fb22f11a40c456a507768180845ee2933439`, with these changes marked `DE1:`:
   - `computer_space_sound.vhd`: a register in the explosion envelope, for timing (see Audio).
   - `sync_star_board.vhd`: the game-on flag's preset made synchronous. As an asynchronous loop its
     start pulse was a few-ns glitch that did not reliably clear the scores for a new game.
@@ -16,6 +16,12 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
     glitched at the rocket image's last pixel, where the rocket counter reloads, which restarted the
     missile counter there and launched the missile from just past the ship's bottom-right corner
     instead of its centre.
+  - `sync_star_board.vhd`: the rocket-saucer collision and both missile-hit detections registered on
+    the falling edge of the game clock. They decode the object windows, which glitch for an instant
+    as the position counters change, and a glitch now and then registered as a phantom collision.
+  - `motion_board.vhd`: the rocket's position counter powers up at `x"7F00"`, so the rocket starts
+    mid-screen. From 0 it started in the vertical blanking, off screen. (The original's counters
+    power up at random.)
 
   No ROMs are needed.
 - **Video mixing** in `de1/computerspace_de1.v` follows **Sorgelig**'s MiSTer wrapper (GPL-2.0+).
