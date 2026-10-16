@@ -103,6 +103,43 @@ The VGA pins carry 30.54 kHz, 510 lines, 59.885 Hz, a 2.74 µs hsync and an 8-li
 `prep_rtl.py` makes simulation-only copies of `rtl/` with two small patches GHDL needs (Quartus takes the
 originals as they are), and `sound_stub.vhd` replaces the sound module for video simulation.
 
+## iCE40 trial
+
+A trial synthesis of the game core alone (no DE1 wrapper) for a Lattice iCE40 HX8K (ct256), to see
+whether a small, cheap board could replace the DE1 in the cabinet. Flow: `ghdl --synth --out=verilog`
+(GHDL 6.0) to Verilog, Yosys `synth_ice40`, nextpnr-ice40 at 50 MHz, all from OSS CAD Suite. Nothing
+from the trial is in the repo; it was run on patched scratch copies.
+
+| | Result |
+|---|---|
+| Logic cells | 4,202 / 7,680 (54%): 3,563 LUT4, 952 flip-flops; multiplies built from LUTs (no DSP) |
+| Block RAM | 0 / 32 |
+| Global buffers | 5 / 8 |
+| Game clock (needs 5.8 MHz) | 87.7 MHz |
+| 50 MHz domain | 29.7 MHz: fails, plus 319 hold violations |
+
+It fits easily; it does not yet meet timing. What a real port would have to change in the core:
+
+1. **Rocket missile timer** (`motion_board.vhd`): the process uses `elsif (rising_edge(clk) and cond)`
+   twice. GHDL synthesis rejects it. Read strictly, the "time's up" branch can never run while the
+   missile timer is counting, so the missile would never expire; Quartus builds the intended
+   behaviour (count while active, clear after 2.3 s), which is why it works on the DE1. Note that GHDL
+   *simulation* follows the strict reading, so a simulated missile never expires.
+2. **Three 7474 flip-flops with both preset and clear** (`sync_star_board.vhd`, game-on and replay
+   flags): the iCE40 has no such flip-flop. The trial let Yosys `async2sync` convert them; a port
+   would rewrite them synchronous to the 50 MHz clock.
+3. **Combinational loops** (the gate-level latches): nextpnr cannot time them; the trial used
+   `--ignore-loops`. Rewriting them as synchronous latches would also clear the hold violations,
+   which come from these shortcuts.
+4. **The 50 MHz critical path** is 68 logic levels into the explosion envelope multiply in
+   `computer_space_sound.vhd` (the same path that needed a register on the DE1). The value only needs
+   updating at the 11 kHz sound rate, so a multi-cycle or shift-add multiply, or running the sound at
+   25 MHz, would fix it.
+
+A board would also need its own video and audio: a few resistors or a VGA PMOD for video (or a native
+15 kHz composite-sync output for the cabinet, with no scandoubler), and a sigma-delta pin with an RC
+filter for audio. The trial build was a resource and timing estimate, not checked for function.
+
 ## Roadmap
 
 - Install in a 1971 one-player cabinet: native 15 kHz composite-sync video for a 15 kHz CRT,
