@@ -7,6 +7,7 @@
 //
 //  Video: 15 kHz native timing scandoubled to ~30.5 kHz / 60 Hz on the
 //  on-board 4-bit resistor VGA DAC.
+//  Audio: the core's sound simulation through the WM8731 codec (line out).
 //
 //  Controls (KEYs are active low):
 //    KEY3  rotate CCW      KEY2  rotate CW
@@ -17,6 +18,7 @@
 //    SW3   replay (extended play)
 //    SW4   colour (off = original monochrome)
 //    SW6:5 scanlines: 0 off, 1 25%, 2 50%, 3 75%
+//    SW8:7 volume: 0 full, 1 -6 dB, 2 -12 dB, 3 -18 dB
 //    SW9   reset (up = held in reset)
 //============================================================================
 
@@ -38,7 +40,15 @@ module computerspace_de1
 	output  [3:0] VGA_G,
 	output  [3:0] VGA_B,
 	output        VGA_HS,
-	output        VGA_VS
+	output        VGA_VS,
+
+	output        AUD_XCK,
+	output        AUD_BCLK,
+	output        AUD_DACLRCK,
+	output        AUD_DACDAT,
+
+	output        I2C_SCLK,
+	inout         I2C_SDAT
 );
 
 assign {HEX3, HEX2, HEX1, HEX0} = {28{1'b1}};   // segments are active low
@@ -103,6 +113,7 @@ wire       sw_2playpercoin = sw_s2[2];
 wire       sw_replay       = sw_s2[3];
 wire       colour          = sw_s2[4];
 wire [1:0] scanlines       = sw_s2[6:5];
+wire [1:0] volume          = sw_s2[8:7];
 
 // Reset: ~20 ms after configuration and PLL lock, and while SW9 is up.
 reg [19:0] por_cnt = 20'd0;
@@ -118,6 +129,7 @@ wire   reset = por | sw_s2[9];
 
 wire       HSync, VSync, HBlank, VBlank;
 wire [3:0] video;
+wire [15:0] audio;
 
 computer_space_top computerspace
 (
@@ -142,7 +154,7 @@ computer_space_top computerspace
 	.vblank(VBlank),
 	.video(video),
 
-	.audio()
+	.audio(audio)
 );
 
 ////////////////////   VIDEO MIX   ///////////////////
@@ -206,9 +218,33 @@ assign VGA_R  = sd_r;
 assign VGA_G  = sd_g;
 assign VGA_B  = sd_b;
 
+////////////////////   AUDIO   ///////////////////
+
+wire        aud_done, aud_nack;
+wire [15:0] aud_sample = $signed(audio) >>> volume;   // 6 dB per step
+
+audio_wm8731 audio_out
+(
+	.clk(CLOCK_50),
+	.reset(reset),
+
+	.sample(aud_sample),
+
+	.AUD_XCK(AUD_XCK),
+	.AUD_BCLK(AUD_BCLK),
+	.AUD_DACLRCK(AUD_DACLRCK),
+	.AUD_DACDAT(AUD_DACDAT),
+
+	.I2C_SCLK(I2C_SCLK),
+	.I2C_SDAT(I2C_SDAT),
+
+	.cfg_done(aud_done),
+	.cfg_nack(aud_nack)
+);
+
 ////////////////////   LEDS   ///////////////////
 
 assign LEDG = {pll_locked, 3'b000, m_ccw, m_cw, m_thrust, m_fire};
-assign LEDR = {reset, 7'd0, m_start, m_coin};
+assign LEDR = {reset, aud_nack, aud_done, 5'd0, m_start, m_coin};
 
 endmodule

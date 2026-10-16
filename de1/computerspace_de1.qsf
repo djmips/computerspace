@@ -18,6 +18,7 @@ set_global_assignment -name SDC_FILE computerspace_de1.sdc
 set_global_assignment -name VERILOG_FILE computerspace_de1.v
 set_global_assignment -name VERILOG_FILE scandoubler_cs.v
 set_global_assignment -name VERILOG_FILE pll_de1.v
+set_global_assignment -name VERILOG_FILE audio_wm8731.v
 set_global_assignment -name VHDL_FILE ../rtl/v74161_16bit.vhd
 set_global_assignment -name VHDL_FILE ../rtl/v74161.vhd
 set_global_assignment -name VHDL_FILE ../rtl/sync_star_board.vhd
@@ -106,5 +107,13 @@ set_location_assignment PIN_C9 -to VGA_R[1]
 set_location_assignment PIN_A7 -to VGA_R[2]
 set_location_assignment PIN_B7 -to VGA_R[3]
 set_location_assignment PIN_B11 -to VGA_VS
+
+# WM8731 audio codec
+set_location_assignment PIN_B4 -to AUD_XCK
+set_location_assignment PIN_A4 -to AUD_BCLK
+set_location_assignment PIN_A5 -to AUD_DACLRCK
+set_location_assignment PIN_B5 -to AUD_DACDAT
+set_location_assignment PIN_A3 -to I2C_SCLK
+set_location_assignment PIN_B3 -to I2C_SDAT
 
 set_global_assignment -name LAST_QUARTUS_VERSION "13.0 SP1"

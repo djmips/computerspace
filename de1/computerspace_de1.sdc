@@ -19,7 +19,8 @@ set_clock_groups -asynchronous \
 
 # Switches, keys, LEDs and the resistor-DAC VGA outputs have no timing relation
 set_false_path -from [get_ports {KEY[*] SW[*]}]
-set_false_path -to   [get_ports {LEDR[*] LEDG[*] HEX0[*] HEX1[*] HEX2[*] HEX3[*] VGA_*}]
+set_false_path -to   [get_ports {LEDR[*] LEDG[*] HEX0[*] HEX1[*] HEX2[*] HEX3[*] VGA_* AUD_* I2C_*}]
+set_false_path -from [get_ports {I2C_SDAT}]
 
 # The scandoubler samples the core's outputs only on ce_in, 3 clk_vid cycles
 # after each clk_game rising edge (clk_div 2 -> 3 -> 0, captured as it leaves 0).

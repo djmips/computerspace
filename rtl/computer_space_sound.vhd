@@ -308,7 +308,14 @@ begin
 	end if;
 end process;
 
-explosion_base <= noisy_square_wave + voices(2) / 64; -- add extra high-freq small noise
+-- DE1: registered to split the path into the envelope multiply, which is too
+-- long for one 50 MHz cycle on Cyclone II. One clock of delay, inaudible.
+process(clock_50)
+begin
+	if rising_edge(clock_50) then
+		explosion_base <= noisy_square_wave + voices(2) / 64; -- add extra high-freq small noise
+	end if;
+end process;
 
 -- quick ADSR to control explosion level enveloppe
 thrust_level : process(clock_50, reset)
