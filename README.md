@@ -8,8 +8,10 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
 - **Core (`rtl/`)**: Computer Space FPGA emulator by **Mattias G** (2015), copied "wire by wire" from the
   schematics; fixes and sound simulation by **DarFPGA** (2017). Taken from
   [MiSTer-devel/Arcade-ComputerSpace_MiSTer](https://github.com/MiSTer-devel/Arcade-ComputerSpace_MiSTer)
-  at commit `8487fb22f11a40c456a507768180845ee2933439`, with one timing change marked `DE1:` (see
-  Audio). No ROMs are needed.
+  at commit `8487fb22f11a40c456a507768180845ee2933439`, with two changes marked `DE1:`: a register in
+  the sound for timing (see Audio), and in `sync_star_board.vhd` the game-on flag's preset made
+  synchronous, because as an asynchronous loop its start pulse was a few-ns glitch that did not
+  reliably clear the scores for a new game. No ROMs are needed.
 - **Video mixing** in `de1/computerspace_de1.v` follows **Sorgelig**'s MiSTer wrapper (GPL-2.0+).
 - **DE1 wrapper, scandoubler, simulation**: this repo.
 

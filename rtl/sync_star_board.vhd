@@ -1424,17 +1424,21 @@ d5_11 <= e5_10;	-- clk
 d5_12 <= c2_8; 	-- d
 d5_10 <= d6_8; 	-- pren 
 
-process(super_clk, d5_13, d5_10)
+-- DE1: the preset is synchronous to super_clk. Asynchronously, d6_8 presets
+-- this flip-flop, which ends d6_8 at once: a few-ns glitch in an FPGA, too
+-- short to reliably clear the score and time counters through e5_8 (on the
+-- TTL board the 7474's delay made it tens of ns). Now d6_8 lasts one clock.
+process(super_clk, d5_13)
 begin
 	if d5_13 = '0' then
 		d5_9 <= '0'; 	-- q is cleared when clrn is active low
 		d5_8 <= '1';	-- qn is cleared when clrn is active low
-	elsif d5_10 = '0' then 
-		d5_9 <= '1'; 	-- q is set to high when pren is active low
-		d5_8 <= '0';	-- qn is set to low when pren is active low
 	elsif rising_edge (super_clk) then
 		d5_11_old <= d5_11;
-		if (d5_11_old = '0') and (d5_11 = '1') then
+		if d5_10 = '0' then
+			d5_9 <= '1'; 	-- q is set to high when pren is active low
+			d5_8 <= '0';	-- qn is set to low when pren is active low
+		elsif (d5_11_old = '0') and (d5_11 = '1') then
 			d5_9 <= d5_12;
 			d5_8 <= not d5_12;
 		end if;
