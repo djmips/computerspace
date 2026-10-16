@@ -3,8 +3,8 @@
 create_clock -name CLOCK_50 -period 20.000 [get_ports CLOCK_50]
 derive_pll_clocks
 
-# The PLL output pin path depends on how altpll was expanded; match it loosely.
-set clk_vid_pin [get_pins -compatibility_mode {pll|altpll_component|*clk[0]}]
+# PLL output pin (a wildcard here also matches inclk[0] and the clkctrl input)
+set clk_vid_pin [get_pins -compatibility_mode {pll|altpll_component|pll|clk[0]}]
 
 # Game clock: clk_vid / 4 from a fabric register
 create_generated_clock -name clk_game -source $clk_vid_pin \
