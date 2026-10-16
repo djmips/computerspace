@@ -8,10 +8,16 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
 - **Core (`rtl/`)**: Computer Space FPGA emulator by **Mattias G** (2015), copied "wire by wire" from the
   schematics; fixes and sound simulation by **DarFPGA** (2017). Taken from
   [MiSTer-devel/Arcade-ComputerSpace_MiSTer](https://github.com/MiSTer-devel/Arcade-ComputerSpace_MiSTer)
-  at commit `8487fb22f11a40c456a507768180845ee2933439`, with two changes marked `DE1:`: a register in
-  the sound for timing (see Audio), and in `sync_star_board.vhd` the game-on flag's preset made
-  synchronous, because as an asynchronous loop its start pulse was a few-ns glitch that did not
-  reliably clear the scores for a new game. No ROMs are needed.
+  at commit `8487fb22f11a40c456a507768180845ee2933439`, with three fixes marked `DE1:`:
+  - `computer_space_sound.vhd`: a register in the explosion envelope, for timing (see Audio).
+  - `sync_star_board.vhd`: the game-on flag's preset made synchronous. As an asynchronous loop its
+    start pulse was a few-ns glitch that did not reliably clear the scores for a new game.
+  - `motion_board.vhd`: the rocket missile's clear (`e6_6`) registered on the falling clock edge. It
+    glitched at the rocket image's last pixel, where the rocket counter reloads, which restarted the
+    missile counter there and launched the missile from just past the ship's bottom-right corner
+    instead of its centre.
+
+  No ROMs are needed.
 - **Video mixing** in `de1/computerspace_de1.v` follows **Sorgelig**'s MiSTer wrapper (GPL-2.0+).
 - **DE1 wrapper, scandoubler, simulation**: this repo.
 
@@ -98,6 +104,11 @@ python render.py core out/core_dump.txt out/core                           # tim
 ./run_de1.sh                      # DE1 top on that dump, ~2 min (+scanlines=2 +colour)
 iverilog -g2005 -o out/tb_audio.vvp tb_audio.v ../de1/audio_wm8731.v && vvp -n out/tb_audio.vvp   # codec I2C + I2S
 ```
+
+`tb_fire.vhd` plays a game far enough to fire (generics set thrust, rotation and fire times) and dumps
+the frames around the shot; `find_objects.py out/fire_dump.txt` prints the bounding box of every
+object per frame, which is how the missile launch point was measured. Build it like `run_core.sh`,
+with `tb_fire` in place of `tb_core`.
 
 Simulated results: the core runs 382 clocks/line, 255 lines and a 32-clock hsync, at 15.27 kHz / 59.885 Hz.
 The VGA pins carry 30.54 kHz, 510 lines, 59.885 Hz, a 2.74 µs hsync and an 8-line vsync.

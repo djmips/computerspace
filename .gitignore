@@ -16,7 +16,7 @@ de1/c5_pin_model_dump.txt
 de1/PLLJ_PLLSPE_INFO.txt
 
 # Simulation
-sim/build/
+sim/build*/
 sim/out/
 sim/*.vvp
 __pycache__/

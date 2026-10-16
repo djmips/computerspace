@@ -214,6 +214,7 @@ architecture motion_board_architecture
 
 signal clk  											: std_logic ;
 signal e5_15, missile_timer  						: std_logic := '0';
+signal e6_6_q								: std_logic := '1';
 signal f4_8												: std_logic := '1';
 signal d6_1, f6_10, f6_13,f6_4,
 		 e6_6 											: std_logic := '1';
@@ -446,7 +447,7 @@ clk <= not MB_20;
 missile_motion: v74161_16bit
  port map(
 			clk 	=> clk,
-			clrn  => e6_6,
+			clrn  => e6_6_q,  -- DE1: registered e6_6, see below
 			ldn 	=> f4_8,
 			enp 	=> '1',
 			ent 	=> MB_C,	
@@ -662,6 +663,20 @@ e6_6 <=	not (d6_1 and a6_12 and f6_4); 		-- Missile Active Flag
 															-- pixel will appear one line
 															-- below and one pixel to the 
 														   -- right of the rocket center 	
+
+-- DE1: e6_6 is registered on the falling edge of clk before it clears the
+-- missile counter. As a decode of the rocket counter it glitches low for an
+-- instant at the rocket image's last pixel, where that counter reloads: bits
+-- 3 and 11 fall (f6_4 on) one gate before the window (a6_12) ends. That glitch
+-- cleared the counter asynchronously and moved the missile's launch point
+-- from the rocket's centre to just past its bottom-right corner. Sampled half
+-- a pixel after the counters change, only the real quadrant clear remains.
+process (clk)
+begin
+	if falling_edge(clk) then
+		e6_6_q <= e6_6;
+	end if;
+end process;
 
 -----------------------------------------------------------------------------
 -- ROCKET MOTION: Keep and change position 											--
