@@ -99,6 +99,26 @@ quartus_sh --flow compile computerspace_de1
 quartus_pgm -c USB-Blaster -m jtag -o "p;output_files/computerspace_de1.sof"
 ```
 
+The board must be powered on (its ON/OFF button) with RUN/PROG on **RUN**. This loads the FPGA over the
+on-board USB-Blaster in about a second, and the design is lost at power-off. The USB-Blaster driver is
+in `quartus\drivers\usb-blaster` (install as administrator, e.g. `pnputil /add-driver usbblstr.inf /install`).
+
+### Writing the flash so the board boots into the game
+
+The DE1's EPCS4 configuration flash holds one image, loaded into the FPGA at every power-up. Writing it
+replaces Terasic's factory demo (`DE1_Default.pof` on the DE1 system CD restores it).
+
+1. Set RUN/PROG to **PROG**.
+2. Convert the build and write it (about 35 s, verified):
+   ```
+   quartus_cpf -c -d EPCS4 output_files/computerspace_de1.sof output_files/computerspace_de1.pof
+   quartus_pgm -c USB-Blaster -m AS -o "pv;output_files/computerspace_de1.pof"
+   ```
+3. Set RUN/PROG back to **RUN** and power-cycle.
+
+A JTAG load still works on top of this for testing, but a power cycle brings back whatever is in flash,
+so reflash after each change that lands on `main`.
+
 ## Simulation
 
 Tools: GHDL 6.0 (`E:\tools\ghdl`) and OSS CAD Suite for Icarus Verilog (`E:\tools\oss-cad-suite`).
@@ -163,7 +183,7 @@ filter for audio. The trial build was a resource and timing estimate, not checke
 
 - Install in a 1971 one-player cabinet: native 15 kHz composite-sync video for a 15 kHz CRT,
   protected GPIO inputs for the cabinet's buttons and coin mech, an amplifier for the speaker
-  (the original TV set provided it), and the design written to flash so the board boots into the game.
+  (the original TV set provided it). The board already boots into the game from its flash.
 - Framebuffer output at true 640x480@60 if an LCD refuses the 30.5 kHz signal.
 
 ## Possible mods
