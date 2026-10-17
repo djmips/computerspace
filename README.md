@@ -10,6 +10,8 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
   [MiSTer-devel/Arcade-ComputerSpace_MiSTer](https://github.com/MiSTer-devel/Arcade-ComputerSpace_MiSTer)
   at commit `8487fb22f11a40c456a507768180845ee2933439`, with these changes marked `DE1:`:
   - `computer_space_sound.vhd`: a register in the explosion envelope, for timing (see Audio).
+  - `computer_space_sound.vhd`: the trigger inputs from the game clock domain synchronised to the
+    50 MHz sound clock, and the output mix registered and clipped instead of wrapping (see Audio).
   - `sync_star_board.vhd`: the game-on flag's preset made synchronous. As an asynchronous loop its
     start pulse was a few-ns glitch that did not reliably clear the scores for a new game.
   - `motion_board.vhd`: the rocket missile's clear (`e6_6`) registered on the falling clock edge. It
@@ -65,9 +67,22 @@ clock: 12.5 MHz master clock, 3.125 MHz bit clock, 48.83 kHz sample rate. After 
 codec registers over I2C in the datasheet's power-up order. The game is silent until a game starts, as
 on the original.
 
-One change to the core: in `computer_space_sound.vhd` the explosion envelope's input is registered,
-because the path into its multiply was too long for one 50 MHz cycle on Cyclone II (it meets timing on
-MiSTer's Cyclone V). It adds one 20 ns clock of delay to a sound computed at 11 kHz.
+Changes to the core, in `computer_space_sound.vhd`:
+
+- The explosion envelope's input is registered, because the path into its multiply was too long for
+  one 50 MHz cycle on Cyclone II (it meets timing on MiSTer's Cyclone V). It adds one 20 ns clock of
+  delay to a sound computed at 11 kHz.
+- The sound triggers (turn, missiles, thrust, explosion, game on) come from the game clock, which is
+  asynchronous to the 50 MHz sound clock, and were summed straight into the output sample. A trigger
+  changing as a sample was taken could corrupt it, heard as crackle on the missile tones. They now pass
+  two-flop synchronisers, and the mix is registered and clipped to 16 bits rather than wrapping.
+
+What remains is the sound as designed. The explosion's crackle is the model's deliberately clipped
+noise. The saucer shot tone sometimes buzzes at the 60 Hz frame rate: the tone is a bit of the saucer
+missile's motion counter, which only counts during the visible picture and reloads once per frame with
+a preset taken from the missile's vertical direction, so in some directions its phase jumps every frame
+(3788 Hz with strong 60 Hz sidebands) and in others it runs smoothly (3818 Hz, clean). That follows
+from the original circuit.
 
 ## Controls
 

@@ -143,6 +143,13 @@ architecture struct of computer_space_sound is
 
 
  signal explosion_cmd_r : std_logic;
+
+ -- DE1: the trigger inputs come from the game clock domain, asynchronous to
+ -- clock_50, and the mix is summed into the output sample. Unsynchronised, an
+ -- input changing as a sample is taken could corrupt that sample (clicks).
+ signal sw_m, sw_s                     : std_logic_vector(7 downto 0) := (others => '0');
+ signal trig_m, trig_s                 : std_logic_vector(3 downto 0) := (others => '0');
+ signal mix                            : integer range -6*32768 to 6*32767;
  
 begin
 
@@ -293,6 +300,17 @@ begin
 	end if;
 end process;
 
+-- DE1: two-flop synchronisers for the inputs from the game clock domain
+process(clock_50)
+begin
+	if rising_edge(clock_50) then
+		sw_m   <= sound_switch;
+		sw_s   <= sw_m;
+		trig_m <= audio_gate & turn_sound & rocket_missile_sound & saucer_missile_sound;
+		trig_s <= trig_m;
+	end if;
+end process;
+
 rndvalue <= to_integer(unsigned(noise_reg(3 downto 0))); -- 4-bit random value
 
 noisy_square_wave_base <= square_wave + voices(1) when noise_gate else square_wave; -- add intermittent noise
@@ -347,8 +365,8 @@ begin
 			end if;
 
 			-- always wait for explosion trigger
-			explosion_cmd_r <= sound_switch(4);
-			if explosion_cmd_r = '0' and sound_switch(4) = '1' then
+			explosion_cmd_r <= sw_s(4);
+			if explosion_cmd_r = '0' and sw_s(4) = '1' then
 				stage := s_attack;
 				timer := attack; -- set attack duration
 			end if;
@@ -412,21 +430,39 @@ end process;
   
 ambiance  <= voices(1)/16; -- divide by power of two 
 
-thrust    <= voices(0)/8  when sound_switch(2) = '1' else 0; -- divide by power of two 
+thrust    <= voices(0)/8  when sw_s(2) = '1' else 0; -- divide by power of two 
 
-turn <=    0 when sound_switch(1) = '0' else
-		  -500 when turn_sound = '0' else
+turn <=    0 when sw_s(1) = '0' else
+		  -500 when trig_s(2) = '0' else
 		   500;
 
-saucer_missile <=    0 when sound_switch(5) = '0' else
-						-500 when saucer_missile_sound = '0' else
+saucer_missile <=    0 when sw_s(5) = '0' else
+						-500 when trig_s(0) = '0' else
 						 500; 
 		
-rocket_missile <=    0 when sound_switch(3) = '0' else
-						-500 when rocket_missile_sound = '0' else
+rocket_missile <=    0 when sw_s(3) = '0' else
+						-500 when trig_s(1) = '0' else
 						 500; 
 					 
-audio <= ambiance + thrust + explosion + turn + saucer_missile + rocket_missile when audio_gate = '1' else 0;
+-- DE1: the sum can pass 16 bits (thrust, explosion and ambiance peaks
+-- together), where it wrapped round with a loud crack; now it clips, and the
+-- output is registered so the sample is taken from a settled value.
+mix <= ambiance + thrust + explosion + turn + saucer_missile + rocket_missile;
+
+process(clock_50)
+begin
+	if rising_edge(clock_50) then
+		if trig_s(3) = '0' then
+			audio <= 0;
+		elsif mix > 32767 then
+			audio <= 32767;
+		elsif mix < -32768 then
+			audio <= -32768;
+		else
+			audio <= mix;
+		end if;
+	end if;
+end process;
 	
     
 end struct;
