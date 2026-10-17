@@ -5,6 +5,8 @@
 //  simulation by DarFPGA (2017), as carried in the MiSTer port by Sorgelig.
 //  Video level mixing below follows Sorgelig's MiSTer wrapper (GPL-2.0+).
 //
+//  This file: GNU General Public License v2.0 or later (see LICENSE).
+//
 //  Video: 15 kHz native timing scandoubled to ~30.5 kHz / 60 Hz on the
 //  on-board 4-bit resistor VGA DAC.
 //  Audio: the core's sound simulation through the WM8731 codec (line out).

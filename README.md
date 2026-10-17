@@ -231,3 +231,20 @@ behaviour as the default.
   monitors.
 - **Native 15 kHz on the VGA pins**: bypass the scandoubler for monitors that accept 15 kHz.
 - **Bench coin/start on the KEYs**: a KEY combination for coin and start, instead of SW0/SW1.
+
+## License
+
+This repository's own work (the DE1 top level, scandoubler, codec interface, PLL wrapper, timing
+constraints, simulation, and the `DE1:` changes to the core) is licensed under the **GNU General Public
+License v2.0 or later**; see [LICENSE](LICENSE). It has to be: the video mixing in
+`de1/computerspace_de1.v` follows Sorgelig's MiSTer wrapper, which is GPL-2.0-or-later.
+
+The core files in `rtl/` remain under their authors' terms, as published in the
+[MiSTer repository](https://github.com/MiSTer-devel/Arcade-ComputerSpace_MiSTer):
+
+- Mattias G's Computer Space emulator (all of `rtl/` except the sound): no license is stated, upstream
+  or in the files. Copyright stays with the author.
+- DarFPGA's `computer_space_sound.vhd`: "Educational use only. Do not redistribute synthetized file
+  with roms. Do not redistribute roms whatever the form. Use at your own risk." (from its header).
+
+Computer Space is a trademark of its respective owners; this is a non-commercial preservation project.
