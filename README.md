@@ -22,6 +22,11 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
   - `motion_board.vhd`: the rocket's position counter powers up at `x"7F00"`, so the rocket starts
     mid-screen. From 0 it started in the vertical blanking, off screen. (The original's counters
     power up at random.)
+  - `sync_star_board.vhd`: scores count to 99 on screen. The original's player score is a binary
+    counter that showed symbols past 9, and the saucer score wrapped from 9 to 0. Both are now decimal
+    with a tens digit, drawn in the score rows' tens column (blank while 0), stopping at 99, and the
+    replay check compares the full scores. SW7 (`score_orig`) brings back the original scoring.
+    Scores also go out on a `scores` port for the 7-segment display.
 
   No ROMs are needed.
 - **Video mixing** in `de1/computerspace_de1.v` follows **Sorgelig**'s MiSTer wrapper (GPL-2.0+).
@@ -31,7 +36,7 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
 
 | Path | What |
 |---|---|
-| `rtl/` | The Computer Space core (VHDL), upstream and unmodified |
+| `rtl/` | The Computer Space core (VHDL), upstream with the `DE1:` changes above |
 | `de1/computerspace_de1.v` | DE1 top level: clocks, controls, video mix, VGA |
 | `de1/scandoubler_cs.v` | Line-locked 15 kHz to 31 kHz scandoubler with optional scanlines |
 | `de1/pll_de1.v` | Cyclone II PLL, 50 MHz to 23.333 MHz |
@@ -76,9 +81,13 @@ MiSTer's Cyclone V). It adds one 20 ns clock of delay to a sound computed at 11 
 | SW2 | two plays per coin |
 | SW3 | replay (extended play) |
 | SW4 | colour (off = original monochrome) |
-| SW6:5 | scanlines: 00 off, 01 25 %, 10 50 %, 11 75 % |
-| SW8:7 | volume: 00 full, 01 -6 dB, 10 -12 dB, 11 -18 dB |
+| SW6:5 | volume: 00 full, 01 -6 dB, 10 -12 dB, 11 -18 dB |
+| SW7 | original scoring: player 0-15 (symbols past 9), saucers 0-9, no tens digit |
+| SW8 | (free) |
 | SW9 | reset (up = held in reset) |
+
+Scanlines are fixed at 50 % (`scanlines` in `computerspace_de1.v`; the scandoubler also does 0, 25 and
+75 %).
 
 To play: flip SW0 once (a coin), then flip SW1 once (start). The switches stand in for the
 cabinet's coin mech and start button, which are momentary contacts, so each *movement* of the switch
@@ -86,7 +95,8 @@ is one short press and the position it ends up in does not matter. Flipping it u
 counts as two. Start does nothing without a coin, as on the original.
 
 LEDG3..0 show the four buttons, LEDG7 the PLL lock, LEDR0/1 the coin/start pulses, LEDR7 the audio
-codec configured, LEDR8 a codec that did not acknowledge, and LEDR9 reset.
+codec configured, LEDR8 a codec that did not acknowledge, and LEDR9 reset. The 7-segment displays show
+the scores: HEX3:2 the player, HEX1:0 the saucers (leading zero blank).
 
 ## Building
 

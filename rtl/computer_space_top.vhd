@@ -109,7 +109,9 @@ entity computer_space_top is
 		vblank			: out std_logic;
 		video 			: out std_logic_vector(3 downto 0);
 		
-		audio          : out integer range -32768 to 32767
+		audio          : out integer range -32768 to 32767;
+	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
+	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
 	);
 end computer_space_top;
 
@@ -155,7 +157,9 @@ component computer_space_logic is
 	sound_switch									: out std_logic_vector (7 downto 0);
 	saucer_missile_sound                   : out std_logic;
 	rocket_missile_sound                   : out std_logic;
-	turn_sound                             : out std_logic
+	turn_sound                             : out std_logic;
+	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
+	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
 	);
 end component computer_space_logic;	
 
@@ -238,7 +242,7 @@ signal_start, signal_coin, signal_thrust, signal_fire,
 signal_cw,signal_ccw, sw_2playpercoin, sw_replay, video, hblank, vblank,
 hsync, vsync,
 audio_gate, sound_switch, saucer_missile_sound,rocket_missile_sound,
-turn_sound
+turn_sound, scores, score_orig
 );		
 
 --------------------------------------------------------------------------

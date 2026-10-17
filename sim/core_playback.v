@@ -10,9 +10,12 @@ module computer_space_top
 	input            sw_2playpercoin, sw_replay,
 	output reg       hsync, vsync, hblank, vblank,
 	output reg [3:0] video,
-	output    [15:0] audio
+	output    [15:0] audio,
+	output    [15:0] scores,
+	input            score_orig
 );
 	assign audio = 16'd0;
+	assign scores = 16'd0;
 	integer fd, n;
 	reg [7:0] s;
 	reg [8*256-1:0] dump;

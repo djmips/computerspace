@@ -17,8 +17,9 @@
 //    SW2   two plays per coin
 //    SW3   replay (extended play)
 //    SW4   colour (off = original monochrome)
-//    SW6:5 scanlines: 0 off, 1 25%, 2 50%, 3 75%
-//    SW8:7 volume: 0 full, 1 -6 dB, 2 -12 dB, 3 -18 dB
+//    SW6:5 volume: 0 full, 1 -6 dB, 2 -12 dB, 3 -18 dB
+//    SW7   original scoring (player 0-15 in symbols, saucer 0-9, no tens)
+//    SW8   (free)
 //    SW9   reset (up = held in reset)
 //============================================================================
 
@@ -51,7 +52,6 @@ module computerspace_de1
 	inout         I2C_SDAT
 );
 
-assign {HEX3, HEX2, HEX1, HEX0} = {28{1'b1}};   // segments are active low
 
 ////////////////////   CLOCKS   ///////////////////
 
@@ -112,8 +112,9 @@ wire m_start = |start_cnt;
 wire       sw_2playpercoin = sw_s2[2];
 wire       sw_replay       = sw_s2[3];
 wire       colour          = sw_s2[4];
-wire [1:0] scanlines       = sw_s2[6:5];
-wire [1:0] volume          = sw_s2[8:7];
+wire [1:0] volume          = sw_s2[6:5];
+wire [1:0] scanlines       = 2'd2;          // 50%, fixed
+wire       score_orig      = sw_s2[7];
 
 // Reset: ~20 ms after configuration and PLL lock, and while SW9 is up.
 reg [19:0] por_cnt = 20'd0;
@@ -130,6 +131,7 @@ wire   reset = por | sw_s2[9];
 wire       HSync, VSync, HBlank, VBlank;
 wire [3:0] video;
 wire [15:0] audio;
+wire [15:0] scores;     // player tens, units, saucer tens, units (decimal)
 
 computer_space_top computerspace
 (
@@ -154,7 +156,9 @@ computer_space_top computerspace
 	.vblank(VBlank),
 	.video(video),
 
-	.audio(audio)
+	.audio(audio),
+	.scores(scores),
+	.score_orig(score_orig)
 );
 
 ////////////////////   VIDEO MIX   ///////////////////
@@ -241,6 +245,26 @@ audio_wm8731 audio_out
 	.cfg_done(aud_done),
 	.cfg_nack(aud_nack)
 );
+
+////////////////////   SCORE DISPLAY   ///////////////////
+// HEX3:HEX2 player score, HEX1:HEX0 saucer score, 0-99, leading zero blank.
+
+function [6:0] seg7;    // segments g..a, active low
+	input [3:0] d;
+	case (d)
+		4'd0: seg7 = 7'b1000000;  4'd1: seg7 = 7'b1111001;
+		4'd2: seg7 = 7'b0100100;  4'd3: seg7 = 7'b0110000;
+		4'd4: seg7 = 7'b0011001;  4'd5: seg7 = 7'b0010010;
+		4'd6: seg7 = 7'b0000010;  4'd7: seg7 = 7'b1111000;
+		4'd8: seg7 = 7'b0000000;  4'd9: seg7 = 7'b0010000;
+		default: seg7 = 7'b1111111;
+	endcase
+endfunction
+
+assign HEX3 = (scores[15:12] == 4'd0) ? 7'b1111111 : seg7(scores[15:12]);
+assign HEX2 = seg7(scores[11:8]);
+assign HEX1 = (scores[7:4]   == 4'd0) ? 7'b1111111 : seg7(scores[7:4]);
+assign HEX0 = seg7(scores[3:0]);
 
 ////////////////////   LEDS   ///////////////////
 

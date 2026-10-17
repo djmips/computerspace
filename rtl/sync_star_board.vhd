@@ -124,7 +124,9 @@ entity sync_star_board is
 	hsync								: out std_logic;
 	vsync								: out std_logic;
 	composite_video_signal  	: out std_logic_vector(3 downto 0);
-	hblank,vblank					: out std_logic
+	hblank,vblank					: out std_logic;
+	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
+	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
 	);
 
 end sync_star_board;
@@ -193,6 +195,8 @@ signal c3_14, c3_2, c3_12, c3_11,
 signal b3_14, b3_2, b3_12,
 		 b3_11, b3_9, b3_8 						: std_logic;
 
+signal c3_tens, b3_tens, c3_disp, b3_disp	: std_logic_vector (3 downto 0) := "0000";  -- DE1 (score to 99)
+signal c3_tens_nz, b3_tens_nz			: std_logic := '0';
 signal b3_count 									: std_logic_vector (3 downto 0);
 signal c3_count 									: std_logic_vector (3 downto 0);
 signal d3_count 									: std_logic_vector (3 downto 0);
@@ -547,7 +551,7 @@ g1_12 <= not f1_12;
 
 h2_10 <= f1_11 nor g1_12;
 
-g2_8 <= not (g1_6 and f1_14 and f1_13 and h2_10); 		-- g1_6 indicates 
+g2_8 <= not ((g1_6 or (not e2_6 and b3_tens_nz)) and f1_14 and f1_13 and h2_10); -- DE1: + TENS (saucer) 		-- g1_6 indicates 
 																		-- proper horizontal
 																		-- position interval
 																		-- (for UNIT)
@@ -564,7 +568,7 @@ g2_8 <= not (g1_6 and f1_14 and f1_13 and h2_10); 		-- g1_6 indicates
 -----------------------------------------------------------------------------	
 h2_13 <= f1_13 nor f1_11;
 
-g2_6 <= not (g1_6 and f1_14 and f1_12 and h2_13); 		-- g1_6 indicates 
+g2_6 <= not ((g1_6 or (not e2_6 and c3_tens_nz)) and f1_14 and f1_12 and h2_13); -- DE1: + TENS (player) 		-- g1_6 indicates 
 																		-- proper horizontal
 																		-- position interval
 																		-- (for UNIT)
@@ -1040,11 +1044,19 @@ process (super_clk, c3_2)
 begin
 if c3_2 = '1' then --- reset
 	c3_count <= "0000";
+	c3_tens  <= "0000";
 elsif rising_edge (super_clk) then
 	c3_14_old <= c3_14;
 	if (c3_14_old = '1') and (c3_14 = '0') then  -- falling edge
-		if c3_count = "1111" then   -- binary counter, reset after reaching 15
-			c3_count <= "0000";
+		-- DE1 (score to 99): decade counter with a tens digit, stops at 99,
+		-- instead of the original binary 7493 that showed symbols past 9
+		if score_orig = '1' then
+			c3_count <= c3_count+1;   -- original: binary, wraps 15 -> 0
+		elsif c3_count = "1001" then
+			if c3_tens /= "1001" then
+				c3_count <= "0000";
+				c3_tens  <= c3_tens + 1;
+			end if;
 		else
 			c3_count <= c3_count+1;
 		end if;
@@ -1052,10 +1064,12 @@ elsif rising_edge (super_clk) then
 end if;
 end process;
 
-c3_12 <= c3_count (0); -- qa
-c3_11 <= c3_count (3); -- qd
-c3_9 	<= c3_count (1); -- qb
-c3_8 	<= C3_count (2); -- qc
+-- DE1 (score to 99): the score digit shown is the tens in the TENS column
+c3_disp <= c3_tens when e2_6 = '0' and score_orig = '0' else c3_count;
+c3_12 <= c3_disp (0); -- qa
+c3_11 <= c3_disp (3); -- qd
+c3_9 	<= c3_disp (1); -- qb
+c3_8 	<= c3_disp (2); -- qc
 
 -----------------------------------------------------------------------------
 -- SCORE & TIME KEEPING CIRCUITRY: Keep and update saucer score				--
@@ -1069,11 +1083,19 @@ process (super_clk, b3_2)
 begin
 if b3_2 = '1' then --- reset
 	b3_count <= "0000";
+	b3_tens  <= "0000";
 elsif rising_edge (super_clk) then
 	b3_14_old <= b3_14;
 	if (b3_14_old = '1') and (b3_14 = '0') then  -- falling edge
-		if b3_count = "1001" then   -- decade counter, reset after reaching 9
-			b3_count <= "0000";
+		-- DE1 (score to 99): tens digit added, stops at 99; the original
+		-- wrapped 9 -> 0 and lost the saucer's tens
+		if b3_count = "1001" then
+			if score_orig = '1' then
+				b3_count <= "0000";   -- original: wraps 9 -> 0
+			elsif b3_tens /= "1001" then
+				b3_count <= "0000";
+				b3_tens  <= b3_tens + 1;
+			end if;
 		else
 			b3_count <= b3_count+1;
 		end if;
@@ -1081,10 +1103,11 @@ elsif rising_edge (super_clk) then
 end if;
 end process;
 
-b3_12 <= b3_count (0); -- qa
-b3_11 <= b3_count (3); -- qd
-b3_9 	<= b3_count (1); -- qb
-b3_8 	<= b3_count (2); -- qc
+b3_disp <= b3_tens when e2_6 = '0' and score_orig = '0' else b3_count;   -- DE1 (score to 99)
+b3_12 <= b3_disp (0); -- qa
+b3_11 <= b3_disp (3); -- qd
+b3_9 	<= b3_disp (1); -- qb
+b3_8 	<= b3_disp (2); -- qc
 
 -----------------------------------------------------------------------------
 -- DISPLAY SCORE & TIME: TENS and Rocket Flag										--
@@ -1101,7 +1124,7 @@ b3_8 	<= b3_count (2); -- qc
 -- saucer's score value to the segment decoder if TIME is not to be			--
 -- displayed	   																			--
 -----------------------------------------------------------------------------
-h1_6 <= e2_6 nand g2_8;
+h1_6 <= (e2_6 nand g2_8) when f2_6 = '0' or score_orig = '1' else not g2_8;  -- DE1 (score to 99): score rows select by row only
 
 -----------------------------------------------------------------------------
 -- DISPLAY SCORE & TIME: Select score and time(tens/unit) to display			--
@@ -1236,7 +1259,8 @@ a2_B (2) <=  a2_5;
 a2_B (3) <=  a2_6;
 
 -- checks if rocket score is higher than saucer score
-a2_15 <= '1' when a2_A > a2_B else '0'; 
+a2_15 <= '1' when score_orig = '1' and a2_A > a2_B else
+		 '1' when score_orig = '0' and (c3_tens & c3_count) > (b3_tens & b3_count) else '0';  -- DE1 (score to 99): both digits
 
 -----------------------------------------------------------------------------
 -- REPLAY CIRCUITRY:	Set Replay or not													-- 
@@ -1475,5 +1499,13 @@ e5_8 <= not d6_8;
 -- when a game is playing, otherwise switch off										--
 -----------------------------------------------------------------------------
 SB_K <= d5_8; -- audio gate signal
+
+-- DE1: score counters out to the top level (7-segment display only)
+c3_tens_nz <= '0' when c3_tens = "0000" or score_orig = '1' else '1';
+b3_tens_nz <= '0' when b3_tens = "0000" or score_orig = '1' else '1';
+-- original scoring: the player's binary 10-15 shown as decimal on the LEDs
+scores <= "0001" & (c3_count - 10) & "0000" & b3_count when score_orig = '1' and c3_count > "1001" else
+          "0000" & c3_count & "0000" & b3_count when score_orig = '1' else
+          c3_tens & c3_count & b3_tens & b3_count;
 
 end sync_star_board_architecture;

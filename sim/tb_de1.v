@@ -11,6 +11,8 @@ module tb_de1;
 	wire [6:0] HEX0, HEX1, HEX2, HEX3;
 	wire [3:0] VGA_R, VGA_G, VGA_B;
 	wire       VGA_HS, VGA_VS;
+	wire       AUD_XCK, AUD_BCLK, AUD_DACLRCK, AUD_DACDAT, I2C_SCLK;
+	tri1       I2C_SDAT;   // board pull-up; no codec model here
 
 	always #10 CLOCK_50 = ~CLOCK_50;
 

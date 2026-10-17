@@ -71,7 +71,9 @@ entity computer_space_logic is
 														
 	saucer_missile_sound							: out std_logic;
 	rocket_missile_sound							: out std_logic;
-	turn_sound										: out std_logic
+	turn_sound										: out std_logic;
+	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
+	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
 	
 	);
 	
@@ -97,7 +99,9 @@ component sync_star_board
 	hsync												: out std_logic;
 	vsync												: out std_logic;
 	composite_video_signal 					 	: out std_logic_vector(3 downto 0);
-	hblank,vblank									: out std_logic  
+	hblank,vblank									: out std_logic;
+	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
+	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)  
 	);																		
 end component;
 
@@ -198,7 +202,7 @@ Sync_Star_Brd : sync_star_board
 port map (reset, game_clk, super_clk, explosion_clk, seconds_clk,
 SB_3, SB_4, SB_6, SB_7, SB_C, SB_D, SB_E, SB_F, SB_N,
 SB_2, SB_5, SB_H, SB_K, SB_L, SB_M, SB_Y, hsync, vsync,
-composite_video_signal, hblank, vblank);
+composite_video_signal, hblank, vblank, scores, score_orig);
 
 -----------------------------------------------------------------------------
 -- MOTION BOARD											            					--
