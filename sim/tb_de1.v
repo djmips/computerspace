@@ -23,7 +23,7 @@ module tb_de1;
 	reg [1:0] sl;
 	initial begin
 		if (!$value$plusargs("out=%s", outf)) outf = "out/vga_dump.txt";
-		if ($value$plusargs("scanlines=%d", sl)) SW[6:5] = sl;
+		if ($value$plusargs("volume=%d", sl)) SW[6:5] = sl;
 		if ($test$plusargs("colour")) SW[4] = 1;
 		fo = $fopen(outf, "w");
 	end

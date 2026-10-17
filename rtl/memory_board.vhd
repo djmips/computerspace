@@ -211,7 +211,11 @@ entity memory_board is
 					-- 0 up / 1 down
 					
 	turn_sound
-															: out std_logic
+															: out std_logic;
+
+	-- DE1: random start like the original (see computer_space_logic)
+	seed_load	: in std_logic := '0';
+	seed			: in std_logic_vector(12 downto 0) := (others => '0')
 	);
 	
 end memory_board;
@@ -1097,6 +1101,20 @@ if rising_edge (super_clk) then
 			e4_count <= "0000";
 				
 	end case;
+
+	-- DE1 (random start): random orientation for the first game
+	if seed_load = '1' then
+		e4_12 <= '1';
+		e4_13 <= '1';
+		e4_count <= unsigned(seed(3 downto 0));
+		if seed(3 downto 0) = "1111" then
+			state <= READY_FOR_CARRY;
+		elsif seed(3 downto 0) = "0000" then
+			state <= READY_FOR_BORROW;
+		else
+			state <= UNSIGNED_UP_DOWN;
+		end if;
+	end if;
 end if;	
 end process;
 			
@@ -1142,6 +1160,10 @@ if rising_edge (super_clk) then
 	-- falling edge, j and k permanent high => toggle
 		e3_15 <= not e3_15;
 		e3_14 <= not e3_14;
+	end if;
+	if seed_load = '1' then   -- DE1 (random start)
+		e3_15 <= seed(4);
+		e3_14 <= not seed(4);
 	end if;
 end if;
 end process;
@@ -1324,6 +1346,9 @@ if rising_edge (super_clk) then
 		j4_count <= j4_count-1;
 	elsif  (j4_5_old = '0') and (j4_5 = '1') and (j4_4 = '1') then
 		j4_count <= j4_count+1;
+	end if;
+	if seed_load = '1' then   -- DE1 (random start): horizontal velocity
+		j4_count <= unsigned(seed(8 downto 5));
 	end if;
 end if;
 end process; 
@@ -1523,6 +1548,9 @@ if rising_edge (super_clk) then
 		h4_count <= h4_count-1;
 	elsif  (h4_5_old = '0') and (h4_5 = '1') and (h4_4 = '1') then
 		h4_count <= h4_count+1;
+	end if;
+	if seed_load = '1' then   -- DE1 (random start): vertical velocity
+		h4_count <= unsigned(seed(12 downto 9));
 	end if;
 end if;
 end process; 

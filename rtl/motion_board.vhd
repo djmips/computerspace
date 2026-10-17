@@ -205,7 +205,13 @@ entity motion_board is
 						
 	saucer_missile_sound,
 	rocket_missile_sound
-															: out std_logic 
+															: out std_logic;
+
+	-- DE1: random start like the original (see computer_space_logic)
+	seeded		: in std_logic := '0';
+	seed			: in std_logic_vector(15 downto 0) := (others => '0');
+	saucer_seeded	: in std_logic := '0';
+	saucer_seed	: in std_logic_vector(15 downto 0) := (others => '0')
 	);
 end motion_board;
 
@@ -223,6 +229,8 @@ signal d6_1, f6_10, f6_13,f6_4,
 -- From 0 it started inside the vertical blanking, off screen until moved.
 -- (The original's counters power up at random.)
 signal a_rocket_q 									: unsigned (15 downto 0) := x"7F00";
+signal seeded_m, seeded_s, seeded_old		: std_logic := '0';  -- DE1 (random start)
+signal s_seeded_m, s_seeded_s, s_seeded_old	: std_logic := '0';
 
 -- signals for horizontal and vertical
 -- velocity for the rocket
@@ -755,7 +763,14 @@ end process;
 process (clk)
 begin
 if rising_edge(clk) then
-	if MB_C='1' then
+	-- DE1 (random start): the random position is loaded once, as the first
+	-- game after power-up starts (the original's counters power up at random)
+	seeded_m <= seeded;
+	seeded_s <= seeded_m;
+	seeded_old <= seeded_s;
+	if seeded_s = '1' and seeded_old = '0' then
+		a_rocket_q <= unsigned(seed);
+	elsif MB_C='1' then
 		if a_rocket_q < 65534 then
 			a_rocket_q <= a_rocket_q + 1;
 		elsif a_rocket_q < 65535 then
@@ -1007,7 +1022,13 @@ end process;
 process (clk)
 begin
 if rising_edge(clk) then
-	if MB_C='1' then
+	-- DE1 (random start): random saucer position, loaded once after power-up
+	s_seeded_m <= saucer_seeded;
+	s_seeded_s <= s_seeded_m;
+	s_seeded_old <= s_seeded_s;
+	if s_seeded_s = '1' and s_seeded_old = '0' then
+		saucer_q <= saucer_seed;
+	elsif MB_C='1' then
 		if saucer_q < 65534 then
 			saucer_q <= saucer_q + 1;
 			e3_15 <= '0';

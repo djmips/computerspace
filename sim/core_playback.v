@@ -12,7 +12,8 @@ module computer_space_top
 	output reg [3:0] video,
 	output    [15:0] audio,
 	output    [15:0] scores,
-	input            score_orig
+	input            score_orig,
+	input            rnd_in
 );
 	assign audio = 16'd0;
 	assign scores = 16'd0;

@@ -26,3 +26,6 @@ set_false_path -from [get_ports {I2C_SDAT}]
 # after each clk_game rising edge (clk_div 2 -> 3 -> 0, captured as it leaves 0).
 set_multicycle_path -setup -end 3 -from [get_clocks {clk_game}] -to [get_clocks {*altpll_component*clk[0]}]
 set_multicycle_path -hold  -end 2 -from [get_clocks {clk_game}] -to [get_clocks {*altpll_component*clk[0]}]
+
+# Ring-oscillator noise source: asynchronous by design, sampled by ring_s1
+set_false_path -to [get_registers {ring_s1[*]}]

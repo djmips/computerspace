@@ -21,9 +21,15 @@ Terasic DE1 board (Cyclone II EP2C20F484C7) with video on the on-board VGA port.
   - `sync_star_board.vhd`: the rocket-saucer collision and both missile-hit detections registered on
     the falling edge of the game clock. They decode the object windows, which glitch for an instant
     as the position counters change, and a glitch now and then registered as a phantom collision.
-  - `motion_board.vhd`: the rocket's position counter powers up at `x"7F00"`, so the rocket starts
-    mid-screen. From 0 it started in the vertical blanking, off screen. (The original's counters
-    power up at random.)
+  - Random start, like the original, whose position, orientation and velocity counters have no reset
+    and power up at random (an FPGA's registers power up at fixed values; from 0 the rocket started
+    off screen, in the vertical blanking). `computer_space_logic.vhd` runs a 32-bit LFSR at 50 MHz
+    with a hardware noise bit mixed in (`rnd_in`, from three free-running ring oscillators in
+    `computerspace_de1.v`). The saucers, on screen from power-up, take their position from it when
+    the power-up reset ends (`motion_board.vhd`). The rocket, hidden until a game is on, takes its
+    position (`motion_board.vhd`), orientation and velocity (`memory_board.vhd`) when the first game
+    starts, so the moment start is pressed adds to the randomness. Later games carry on from the
+    previous one, as on the original.
   - `sync_star_board.vhd`: scores count to 99 on screen. The original's player score is a binary
     counter that showed symbols past 9, and the saucer score wrapped from 9 to 0. Both are now decimal
     with a tens digit, drawn in the score rows' tens column (blank while 0), stopping at 99, and the
@@ -152,7 +158,7 @@ Tools: GHDL 6.0 (`E:\tools\ghdl`) and OSS CAD Suite for Icarus Verilog (`E:\tool
 cd sim
 ./run_core.sh -gFRAMES=30 -gSKIP_FRAMES=1 -gDUMP_FILE=out/core_dump.txt   # core, ~1 min
 python render.py core out/core_dump.txt out/core                           # timing + PNGs
-./run_de1.sh                      # DE1 top on that dump, ~2 min (+scanlines=2 +colour)
+./run_de1.sh                      # DE1 top on that dump, ~2 min (+colour)
 iverilog -g2005 -o out/tb_audio.vvp tb_audio.v ../de1/audio_wm8731.v && vvp -n out/tb_audio.vvp   # codec I2C + I2S
 ```
 

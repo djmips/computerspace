@@ -73,7 +73,8 @@ entity computer_space_logic is
 	rocket_missile_sound							: out std_logic;
 	turn_sound										: out std_logic;
 	scores : out std_logic_vector(15 downto 0);  -- DE1: player and saucer scores (tens, units), for the 7-segment display
-	score_orig : in std_logic := '0'  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
+	score_orig : in std_logic := '0';  -- DE1: '1' = original scoring (player 0-15 binary, saucer 0-9)
+	rnd_in : in std_logic := '0'  -- DE1: hardware noise bit, mixed into the random start (0 in simulation)
 	
 	);
 	
@@ -82,6 +83,14 @@ end computer_space_logic;
 architecture
 computer_space_logic_architecture
 of computer_space_logic is 
+
+-- DE1 (random start)
+signal rnd				: std_logic_vector(31 downto 0) := (others => '0');
+signal seed				: std_logic_vector(31 downto 0) := (others => '0');
+signal seeded, seed_load	: std_logic := '0';
+signal saucer_seed		: std_logic_vector(15 downto 0) := (others => '0');
+signal saucer_seeded	: std_logic := '0';
+signal game_on_old		: std_logic := '1';
 
 component sync_star_board 
 	port (
@@ -126,7 +135,11 @@ component motion_board
 	MB_P, MB_R, MB_W,  
 	MB_2_rocket, MB_2_saucer,
 	saucer_missile_sound,
-	rocket_missile_sound                  : out std_logic 
+	rocket_missile_sound                  : out std_logic;
+	seeded		: in std_logic := '0';
+	seed			: in std_logic_vector(15 downto 0) := (others => '0');
+	saucer_seeded	: in std_logic := '0';
+	saucer_seed	: in std_logic_vector(15 downto 0) := (others => '0')
 	);
 end component;
 
@@ -149,7 +162,9 @@ component memory_board
 	MemBrd_K1, MemBrd_K2, MemBrd_P,
 	MemBrd_T, MemBrd_U, MemBrd_V, 
 	MemBrd_W, MemBrd_X, MemBrd_Y,
-	turn_sound										: out std_logic
+	turn_sound										: out std_logic;
+	seed_load	: in std_logic := '0';
+	seed			: in std_logic_vector(12 downto 0) := (others => '0')
 	);
 end component;
 
@@ -213,7 +228,8 @@ saucer_missile_life_time_duration, saucer_missile_hold_duration,
 signal_delay_duration, MB_3, MB_4, MB_16, MB_17, MB_18, MB_19, MB_20, MB_C,
 MB_D, MB_H, MB_J,	MB_T, MB_U, MB_V,	MB_Y, MB_5, MB_6, MB_8, MB_9, MB_10,
 MB_11, MB_12, MB_13, MB_14, MB_15,MB_21, MB_B, MB_E, MB_F, MB_K, MB_L, MB_N,
-MB_M,	MB_P, MB_R, MB_W, MB_2_rocket, MB_2_saucer,saucer_missile_sound,rocket_missile_sound); 
+MB_M,	MB_P, MB_R, MB_W, MB_2_rocket, MB_2_saucer,saucer_missile_sound,rocket_missile_sound,
+seeded, seed(15 downto 0), saucer_seeded, saucer_seed); 
 
 -----------------------------------------------------------------------------
 -- MEMORY BOARD  											            					--
@@ -225,7 +241,8 @@ MemBrd_10, MemBrd_11, MemBrd_A, MemBrd_B, MemBrd_C, MemBrd_D, MemBrd_E,
 MemBrd_F, MemBrd_H, MemBrd_J, MemBrd_K, MemBrd_M, MemBrd_N, MemBrd_R,
 MemBrd_S, MemBrd_12, MemBrd_13, MemBrd_14, MemBrd_15, MemBrd_16, MemBrd_17,
 MemBrd_K1, MemBrd_K2, MemBrd_P, MemBrd_T, MemBrd_U, MemBrd_V, MemBrd_W,
-MemBrd_X, MemBrd_Y, turn_sound); 								
+MemBrd_X, MemBrd_Y, turn_sound,
+seed_load, seed(28 downto 16)); 								
 		
 -----------------------------------------------------------------------------
 -- COMPUTER SPACE BOARD INTRA CONNECTION MAPPING                 				--
@@ -351,6 +368,37 @@ MemBrd_N <= signal_ccw;
 --																									--
 -- connecting to sound module, specific to the fpga board implementation	--
 -----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-- DE1 (random start): the original's position, orientation and velocity
+-- counters have no reset and power up at random. FPGA registers power up to
+-- fixed values, so here a 32-bit LFSR runs at 50 MHz from configuration,
+-- with a hardware noise bit (rnd_in, from free-running ring oscillators on
+-- the DE1) mixed in.
+-- * The saucers are on screen from power-up, so their position is taken
+--   from the LFSR when the power-up reset ends.
+-- * The rocket is not shown before a game is on; its position, orientation
+--   and velocity are taken when the first game starts, so the moment the
+--   player presses start adds to the randomness.
+-- Later games carry on from the previous one, as on the original.
+-----------------------------------------------------------------------------
+process (super_clk)
+begin
+if rising_edge (super_clk) then
+	rnd <= rnd(30 downto 0) & ((rnd(31) xnor rnd(21) xnor rnd(1) xnor rnd(0)) xor rnd_in);
+	if reset = '0' and saucer_seeded = '0' then
+		saucer_seed <= rnd(31 downto 16);
+		saucer_seeded <= '1';
+	end if;
+	game_on_old <= not SB_K;
+	seed_load <= '0';
+	if reset = '0' and seeded = '0' and game_on_old = '0' and SB_K = '0' then
+		seed <= rnd;
+		seeded <= '1';
+		seed_load <= '1';
+	end if;
+end if;
+end process;
+
 audio_gate <= not SB_K;	-- if high, then audio is active (game is on)
 								-- if low then audio is inactive (game is not on)
 

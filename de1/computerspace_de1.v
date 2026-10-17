@@ -126,6 +126,26 @@ end
 assign por   = ~&por_cnt;
 wire   reset = por | sw_s2[9];
 
+////////////////////   NOISE   ///////////////////
+// Three free-running ring oscillators of different lengths, sampled by
+// CLOCK_50. Their jitter against the crystal makes the sampled bit truly
+// unpredictable; the core mixes it into the random start (the original's
+// counters power up at random, an FPGA's at fixed values).
+
+wire [2:0] ring;
+reg  [2:0] ring_s1, ring_s2;
+
+ring_osc #(.N(5)) ring0 (.out(ring[0]));
+ring_osc #(.N(7)) ring1 (.out(ring[1]));
+ring_osc #(.N(9)) ring2 (.out(ring[2]));
+
+always @(posedge CLOCK_50) begin
+	ring_s1 <= ring;
+	ring_s2 <= ring_s1;
+end
+
+wire rnd_bit = ^ring_s2;
+
 ////////////////////   CORE   ///////////////////
 
 wire       HSync, VSync, HBlank, VBlank;
@@ -158,7 +178,8 @@ computer_space_top computerspace
 
 	.audio(audio),
 	.scores(scores),
-	.score_orig(score_orig)
+	.score_orig(score_orig),
+	.rnd_in(rnd_bit)
 );
 
 ////////////////////   VIDEO MIX   ///////////////////
@@ -271,4 +292,18 @@ assign HEX0 = seg7(scores[3:0]);
 assign LEDG = {pll_locked, 3'b000, m_ccw, m_cw, m_thrust, m_fire};
 assign LEDR = {reset, aud_nack, aud_done, 5'd0, m_start, m_coin};
 
+endmodule
+
+
+// Ring oscillator: N inverting LCELLs in a loop (N odd). The LCELLs keep
+// Quartus from collapsing the loop.
+module ring_osc #(parameter N = 5) (output out);
+	wire [N-1:0] w /* synthesis keep */;
+	genvar i;
+	generate
+		for (i = 0; i < N; i = i + 1) begin : stage
+			lcell c (.in(~w[(i + N - 1) % N]), .out(w[i]));
+		end
+	endgenerate
+	assign out = w[N-1];
 endmodule
